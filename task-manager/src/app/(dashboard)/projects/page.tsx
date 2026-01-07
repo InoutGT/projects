@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth, signOut } from "@/auth";
+import { Navigation } from "@/components/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -54,10 +55,8 @@ export default async function ProjectsPage() {
             {session.user.email} · {projects.length} проектов
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link href="/">
-            <Button variant="ghost">Доски</Button>
-          </Link>
+        <div className="flex items-center gap-4">
+          <Navigation />
           <form action={signOutAction}>
             <Button variant="ghost" type="submit">
               Выйти

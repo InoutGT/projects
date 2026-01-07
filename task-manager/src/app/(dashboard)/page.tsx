@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth, signOut } from "@/auth";
+import { Navigation } from "@/components/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,9 +10,9 @@ import { TextArea } from "@/components/ui/textarea";
 import { prisma } from "@/lib/prisma";
 
 import {
-  createBoardAction,
   createColumnAction,
   createTaskAction,
+  deleteColumnAction,
   moveTaskAction,
 } from "./actions";
 
@@ -78,13 +79,8 @@ export default async function DashboardPage() {
             {session.user.email} · {workspace.boards.length} бордов
           </p>
         </div>
-        <div className="flex gap-2">
-          <Link href="/projects">
-            <Button variant="ghost">Проекты</Button>
-          </Link>
-          <Link href="/tasks">
-            <Button variant="ghost">Задачи</Button>
-          </Link>
+        <div className="flex items-center gap-4">
+          <Navigation />
           <form action={signOutAction}>
             <Button variant="ghost" type="submit">
               Выйти
@@ -93,43 +89,19 @@ export default async function DashboardPage() {
         </div>
       </header>
 
-      <section className="grid gap-4 md:grid-cols-2">
-        <div className="card p-6 space-y-4">
-          <div className="flex items-center justify-between gap-2">
-            <div>
-              <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
-                Активный борд
-              </p>
-              <h2 className="text-xl font-semibold text-white">
-                {activeBoard?.name ?? "Борд не создан"}
-              </h2>
-            </div>
-            <Badge variant="neutral">
-              {activeBoard?.columns?.length ?? 0} колонок
-            </Badge>
+      <section className="card p-6">
+        <div className="flex items-center justify-between gap-2">
+          <div>
+            <p className="text-xs uppercase tracking-[0.2em] text-slate-400">
+              Активный борд
+            </p>
+            <h2 className="text-xl font-semibold text-white">
+              {activeBoard?.name ?? "Борд не создан"}
+            </h2>
           </div>
-          {workspace.boards.length > 1 ? (
-            <p className="text-sm text-slate-400">
-              В этом MVP показан только самый ранний борд. Остальные можно
-              увидеть в базе.
-            </p>
-          ) : (
-            <p className="text-sm text-slate-400">
-              Добавьте больше бордов, чтобы разделять проекты.
-            </p>
-          )}
-        </div>
-
-        <div className="card p-6">
-          <h3 className="mb-3 text-lg font-semibold text-white">
-            Создать новый борд
-          </h3>
-          <form action={createBoardAction} className="space-y-3">
-            <Input name="name" placeholder="Например: Запуск продукта" required />
-            <Button type="submit" fullWidth>
-              Создать борд с базовыми колонками
-            </Button>
-          </form>
+          <Badge variant="neutral">
+            {activeBoard?.columns?.length ?? 0} колонок
+          </Badge>
         </div>
       </section>
 
@@ -146,7 +118,17 @@ export default async function DashboardPage() {
                     {column.title}
                   </h3>
                 </div>
-                <Badge variant="neutral">{column.tasks.length}</Badge>
+                <div className="flex items-center gap-2">
+                  <Badge variant="neutral">{column.tasks.length}</Badge>
+                  <form action={async () => {
+                    "use server";
+                    await deleteColumnAction(column.id);
+                  }}>
+                    <Button type="submit" variant="ghost" size="sm" className="text-red-400 hover:text-red-300">
+                      ×
+                    </Button>
+                  </form>
+                </div>
               </div>
 
               <div className="space-y-3">

@@ -9,7 +9,7 @@ import { signInSchema } from "@/lib/validators";
 const authConfig: NextAuthConfig = {
   adapter: PrismaAdapter(prisma),
   session: {
-    strategy: "database",
+    strategy: "jwt",
   },
   secret: process.env.NEXTAUTH_SECRET,
   providers: [
@@ -52,18 +52,16 @@ const authConfig: NextAuthConfig = {
     signIn: "/signin",
   },
   callbacks: {
-    async session({ session }) {
-      if (session.user?.email) {
-        const dbUser = await prisma.user.findUnique({
-          where: { email: session.user.email },
-          select: { id: true },
-        });
-
-        if (dbUser) {
-          session.user.id = dbUser.id;
-        }
+    async jwt({ token, user }) {
+      if (user) {
+        token.id = user.id;
       }
-
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.id = token.id as string;
+      }
       return session;
     },
   },

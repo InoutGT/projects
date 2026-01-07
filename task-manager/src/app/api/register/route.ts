@@ -70,9 +70,54 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true }, { status: 201 });
   } catch (error) {
-    console.error(error);
+    console.error("Registration error:", error);
+    
+    // Проверяем, является ли ошибка ошибкой подключения к БД
+    const errorMessage = error instanceof Error ? error.message : String(error);
+    const errorName = error instanceof Error ? error.name : "";
+    
+    // Prisma ошибки подключения
+    if (errorName === "PrismaClientInitializationError" || 
+        errorMessage.includes("Can't reach database server") || 
+        errorMessage.includes("P1001") ||
+        errorMessage.includes("connect ECONNREFUSED") ||
+        errorMessage.includes("Connection refused") ||
+        errorMessage.includes("does not exist")) {
+      return NextResponse.json(
+        { 
+          error: "Не удалось подключиться к базе данных. Убедитесь, что:\n" +
+                 "1. PostgreSQL запущен и доступен на localhost:5432\n" +
+                 "2. База данных 'task_manager' создана\n" +
+                 "3. Миграции применены (выполните: npx prisma migrate dev)\n" +
+                 "4. DATABASE_URL в файле .env корректна"
+        },
+        { status: 503 },
+      );
+    }
+    
+    // Ошибки уникальности
+    if (errorMessage.includes("P2002") || 
+        errorMessage.includes("Unique constraint") ||
+        errorMessage.includes("Unique violation")) {
+      return NextResponse.json(
+        { error: "Пользователь с таким email уже существует" },
+        { status: 409 },
+      );
+    }
+    
+    // Ошибки валидации Prisma
+    if (errorMessage.includes("P2003") || errorMessage.includes("Foreign key constraint")) {
+      return NextResponse.json(
+        { error: "Ошибка при создании пользователя. Проверьте, что миграции базы данных применены." },
+        { status: 500 },
+      );
+    }
+    
     return NextResponse.json(
-      { error: "Не удалось зарегистрировать пользователя" },
+      { 
+        error: "Не удалось зарегистрировать пользователя",
+        details: process.env.NODE_ENV === "development" ? errorMessage : undefined
+      },
       { status: 500 },
     );
   }

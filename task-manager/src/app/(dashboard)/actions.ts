@@ -45,38 +45,26 @@ async function assertBoardAccess(boardId: string, userId: string) {
   return board;
 }
 
-export async function createBoardAction(formData: FormData): Promise<void> {
+export async function deleteColumnAction(columnId: string): Promise<void> {
   try {
     const userId = await requireUserId();
-    const parsed = boardSchema.safeParse({
-      name: formData.get("name"),
+    
+    const column = await prisma.column.findUnique({
+      where: { id: columnId },
+      include: { board: { include: { workspace: true } } },
     });
 
-    if (!parsed.success) {
+    if (!column || column.board.workspace.ownerId !== userId) {
       return;
     }
 
-    const workspace = await requireWorkspace(userId);
-
-    await prisma.board.create({
-      data: {
-        name: parsed.data.name,
-        workspaceId: workspace.id,
-        columns: {
-          create: [
-            { title: "Backlog", position: 0 },
-            { title: "In Progress", position: 1 },
-            { title: "Done", position: 2 },
-          ],
-        },
-      },
+    await prisma.column.delete({
+      where: { id: columnId },
     });
 
     revalidatePath("/");
   } catch (error) {
-    // Ошибки авторизации и валидации обрабатываются в requireUserId/requireWorkspace
-    // Другие ошибки логируем, но не показываем пользователю для безопасности
-    console.error("Error creating board:", error);
+    console.error("Error deleting column:", error);
   }
 }
 

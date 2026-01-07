@@ -124,3 +124,54 @@ export async function updateTaskStatusAction(
     console.error("Error updating task status:", error);
   }
 }
+
+export async function updateTaskAction(formData: FormData): Promise<void> {
+  try {
+    await requireUserId();
+    const taskId = formData.get("taskId") as string;
+    const parsed = taskSchema.safeParse({
+      title: formData.get("title"),
+      description: formData.get("description"),
+      priority: formData.get("priority") ?? "MEDIUM",
+      status: formData.get("status") ?? "TODO",
+      dueDate: formData.get("dueDate") || undefined,
+    });
+
+    if (!parsed.success || !taskId) {
+      return;
+    }
+
+    const { title, description, priority, status, dueDate } = parsed.data;
+
+    await prisma.task.update({
+      where: { id: taskId },
+      data: {
+        title,
+        description,
+        priority: priority as "LOW" | "MEDIUM" | "HIGH",
+        status: status as "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE",
+        dueDate: dueDate ? new Date(dueDate) : null,
+      },
+    });
+
+    revalidatePath("/tasks");
+    revalidatePath("/");
+  } catch (error) {
+    console.error("Error updating task:", error);
+  }
+}
+
+export async function deleteTaskAction(taskId: string): Promise<void> {
+  try {
+    await requireUserId();
+
+    await prisma.task.delete({
+      where: { id: taskId },
+    });
+
+    revalidatePath("/tasks");
+    revalidatePath("/");
+  } catch (error) {
+    console.error("Error deleting task:", error);
+  }
+}

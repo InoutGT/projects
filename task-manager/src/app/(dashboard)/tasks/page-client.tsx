@@ -3,6 +3,7 @@
 import { useRouter } from "next/navigation";
 import { useState, useTransition } from "react";
 
+import { Navigation } from "@/components/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { TextArea } from "@/components/ui/textarea";
@@ -47,7 +48,10 @@ export default function TasksPageClient({
           <h1 className="text-3xl font-semibold text-white">Задачи</h1>
           <p className="text-sm text-slate-400">Управление задачами проекта</p>
         </div>
-        <CreateTaskForm />
+        <div className="flex items-center gap-4">
+          <Navigation />
+          <CreateTaskForm />
+        </div>
       </div>
 
       {/* Статистика */}
