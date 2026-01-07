@@ -2,6 +2,7 @@ import Link from "next/link";
 import { redirect } from "next/navigation";
 
 import { auth, signOut } from "@/auth";
+import { Navigation } from "@/components/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -9,8 +10,11 @@ import { prisma } from "@/lib/prisma";
 
 import {
   addProjectMemberAction,
+  createProjectBoardAction,
   removeProjectMemberAction,
 } from "../actions";
+
+import { BoardCard } from "./board-card";
 
 async function signOutAction() {
   "use server";
@@ -81,13 +85,8 @@ export default async function ProjectDetailPage({
             <p className="mt-2 text-slate-400">{project.description}</p>
           )}
         </div>
-        <div className="flex gap-2">
-          <Link href="/projects">
-            <Button variant="ghost">Все проекты</Button>
-          </Link>
-          <Link href="/">
-            <Button variant="ghost">Доски</Button>
-          </Link>
+        <div className="flex items-center gap-4">
+          <Navigation />
           <form action={signOutAction}>
             <Button variant="ghost" type="submit">
               Выйти
@@ -99,25 +98,43 @@ export default async function ProjectDetailPage({
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2 space-y-6">
           <section>
-            <h2 className="mb-4 text-xl font-semibold text-white">Доски проекта</h2>
+            <div className="mb-4 flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-white">Доски проекта</h2>
+            </div>
             {project.boards.length > 0 ? (
               <div className="grid gap-4 md:grid-cols-2">
                 {project.boards.map((board) => (
-                  <Link
+                  <BoardCard
                     key={board.id}
-                    href={`/projects/${projectId}/boards/${board.id}`}
-                    className="group rounded-lg border border-white/10 bg-white/5 p-4 transition-all hover:border-white/20 hover:bg-white/10"
-                  >
-                    <h3 className="mb-2 font-semibold text-white">{board.name}</h3>
-                    <p className="text-xs text-slate-400">
-                      {board._count.columns} колонок
-                    </p>
-                  </Link>
+                    boardId={board.id}
+                    boardName={board.name}
+                    projectId={projectId}
+                    columnsCount={board._count.columns}
+                  />
                 ))}
+                <div className="rounded-lg border border-dashed border-white/10 bg-white/5 p-4">
+                  <h3 className="mb-3 text-sm font-semibold text-white">Создать доску</h3>
+                  <form action={createProjectBoardAction} className="space-y-2">
+                    <input type="hidden" name="projectId" value={projectId} />
+                    <Input name="name" placeholder="Название доски" required />
+                    <Button type="submit" variant="secondary" fullWidth>
+                      Создать
+                    </Button>
+                  </form>
+                </div>
               </div>
             ) : (
-              <div className="rounded-lg border border-dashed border-white/10 bg-white/5 p-8 text-center">
-                <p className="text-slate-400">Пока нет досок в этом проекте</p>
+              <div className="grid gap-4 md:grid-cols-2">
+                <div className="rounded-lg border border-dashed border-white/10 bg-white/5 p-8 text-center">
+                  <p className="mb-4 text-slate-400">Пока нет досок в этом проекте</p>
+                  <form action={createProjectBoardAction} className="space-y-3">
+                    <input type="hidden" name="projectId" value={projectId} />
+                    <Input name="name" placeholder="Название доски" required />
+                    <Button type="submit" variant="secondary" fullWidth>
+                      Создать первую доску
+                    </Button>
+                  </form>
+                </div>
               </div>
             )}
           </section>

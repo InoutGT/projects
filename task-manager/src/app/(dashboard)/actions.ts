@@ -35,7 +35,13 @@ async function requireWorkspace(userId: string) {
 
 async function assertBoardAccess(boardId: string, userId: string) {
   const board = await prisma.board.findFirst({
-    where: { id: boardId, workspace: { ownerId: userId } },
+    where: {
+      id: boardId,
+      OR: [
+        { workspace: { ownerId: userId } },
+        { project: { OR: [{ ownerId: userId }, { members: { some: { userId } } }] } },
+      ],
+    },
   });
 
   if (!board) {
@@ -51,10 +57,30 @@ export async function deleteColumnAction(columnId: string): Promise<void> {
     
     const column = await prisma.column.findUnique({
       where: { id: columnId },
-      include: { board: { include: { workspace: true } } },
+      include: {
+        board: {
+          include: {
+            workspace: true,
+            project: {
+              include: { members: true },
+            },
+          },
+        },
+      },
     });
 
-    if (!column || column.board.workspace.ownerId !== userId) {
+    if (!column) {
+      return;
+    }
+
+    // Проверяем доступ: либо workspace owner, либо project owner/member
+    const hasAccess =
+      (column.board.workspace && column.board.workspace.ownerId === userId) ||
+      (column.board.project &&
+        (column.board.project.ownerId === userId ||
+          column.board.project.members.some((m) => m.userId === userId)));
+
+    if (!hasAccess) {
       return;
     }
 
@@ -63,6 +89,9 @@ export async function deleteColumnAction(columnId: string): Promise<void> {
     });
 
     revalidatePath("/");
+    if (column.board.projectId) {
+      revalidatePath(`/projects/${column.board.projectId}/boards/${column.board.id}`);
+    }
   } catch (error) {
     console.error("Error deleting column:", error);
   }
@@ -81,7 +110,7 @@ export async function createColumnAction(formData: FormData): Promise<void> {
     }
 
     const { boardId, title } = parsed.data;
-    await assertBoardAccess(boardId, userId);
+    const board = await assertBoardAccess(boardId, userId);
 
     const lastColumn = await prisma.column.findFirst({
       where: { boardId },
@@ -99,6 +128,9 @@ export async function createColumnAction(formData: FormData): Promise<void> {
     });
 
     revalidatePath("/");
+    if (board.projectId) {
+      revalidatePath(`/projects/${board.projectId}/boards/${boardId}`);
+    }
   } catch (error) {
     console.error("Error creating column:", error);
   }
@@ -107,6 +139,8 @@ export async function createColumnAction(formData: FormData): Promise<void> {
 export async function createTaskAction(formData: FormData): Promise<void> {
   try {
     await requireUserId();
+    const columnId = formData.get("columnId") as string | null;
+    
     const parsed = taskSchema.safeParse({
       title: formData.get("title"),
       description: formData.get("description"),
@@ -120,24 +154,60 @@ export async function createTaskAction(formData: FormData): Promise<void> {
 
     const { description, priority, title, status } = parsed.data;
 
-    const lastTask = await prisma.task.findFirst({
-      where: { status: status as "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE" },
-      orderBy: { position: "desc" },
-    });
+    // Если указан columnId, создаем задачу в колонке
+    if (columnId) {
+      const column = await prisma.column.findUnique({
+        where: { id: columnId },
+        include: { board: true },
+      });
 
-    const position = typeof lastTask?.position === "number" ? lastTask.position + 1 : 0;
+      if (!column) {
+        return;
+      }
 
-    await prisma.task.create({
-      data: {
-        title,
-        description,
-        priority: priority as "LOW" | "MEDIUM" | "HIGH",
-        status: status as "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE",
-        position,
-      },
-    });
+      const lastTask = await prisma.task.findFirst({
+        where: { columnId },
+        orderBy: { position: "desc" },
+      });
 
-    revalidatePath("/");
+      const position = typeof lastTask?.position === "number" ? lastTask.position + 1 : 0;
+
+      await prisma.task.create({
+        data: {
+          title,
+          description,
+          priority: priority as "LOW" | "MEDIUM" | "HIGH",
+          status: status as "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE",
+          position,
+          columnId,
+        },
+      });
+
+      revalidatePath("/");
+      if (column.board.projectId) {
+        revalidatePath(`/projects/${column.board.projectId}/boards/${column.board.id}`);
+      }
+    } else {
+      // Старый способ - создание по статусу (для обратной совместимости)
+      const lastTask = await prisma.task.findFirst({
+        where: { status: status as "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE" },
+        orderBy: { position: "desc" },
+      });
+
+      const position = typeof lastTask?.position === "number" ? lastTask.position + 1 : 0;
+
+      await prisma.task.create({
+        data: {
+          title,
+          description,
+          priority: priority as "LOW" | "MEDIUM" | "HIGH",
+          status: status as "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE",
+          position,
+        },
+      });
+
+      revalidatePath("/");
+    }
   } catch (error) {
     console.error("Error creating task:", error);
   }
@@ -146,35 +216,133 @@ export async function createTaskAction(formData: FormData): Promise<void> {
 export async function moveTaskAction(formData: FormData): Promise<void> {
   try {
     await requireUserId();
-    const parsed = moveTaskSchema.safeParse({
-      taskId: formData.get("taskId"),
-      status: formData.get("status"),
-      position: Number(formData.get("position")),
-    });
+    const taskId = formData.get("taskId") as string;
+    const columnId = formData.get("columnId") as string | null;
+    const status = formData.get("status") as string | null;
+    const position = Number(formData.get("position") || 0);
 
-    if (!parsed.success) {
+    if (!taskId) {
       return;
     }
 
-    const { taskId, status, position } = parsed.data;
-
     const task = await prisma.task.findUnique({
       where: { id: taskId },
+      include: { column: { include: { board: true } } },
     });
 
     if (!task) {
       return;
     }
 
-    const statusEnum = status as "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE";
+    // Если указан columnId, перемещаем в колонку
+    if (columnId) {
+      const newColumn = await prisma.column.findUnique({
+        where: { id: columnId },
+        include: { board: true },
+      });
 
+      if (!newColumn) {
+        return;
+      }
+
+      await prisma.task.update({
+        where: { id: taskId },
+        data: {
+          columnId,
+          position,
+        },
+      });
+
+      revalidatePath("/");
+      if (newColumn.board.projectId) {
+        revalidatePath(`/projects/${newColumn.board.projectId}/boards/${newColumn.board.id}`);
+      }
+    } else if (status) {
+      // Старый способ - перемещение по статусу (для обратной совместимости)
+      const parsed = moveTaskSchema.safeParse({
+        taskId,
+        status,
+        position,
+      });
+
+      if (!parsed.success) {
+        return;
+      }
+
+      const statusEnum = status as "TODO" | "IN_PROGRESS" | "REVIEW" | "DONE";
+
+      await prisma.task.update({
+        where: { id: taskId },
+        data: { status: statusEnum, position },
+      });
+
+      revalidatePath("/");
+    }
+  } catch (error) {
+    console.error("Error moving task:", error);
+  }
+}
+
+export async function moveTaskToColumnAction(
+  taskId: string,
+  newColumnId: string,
+  newPosition: number,
+): Promise<void> {
+  try {
+    await requireUserId();
+
+    const task = await prisma.task.findUnique({
+      where: { id: taskId },
+      include: { column: { include: { board: true } } },
+    });
+
+    if (!task) {
+      return;
+    }
+
+    const newColumn = await prisma.column.findUnique({
+      where: { id: newColumnId },
+      include: { board: true },
+    });
+
+    if (!newColumn) {
+      return;
+    }
+
+    // Обновляем позиции других задач в новой колонке
+    const tasksInNewColumn = await prisma.task.findMany({
+      where: {
+        columnId: newColumnId,
+        id: { not: taskId },
+        position: { gte: newPosition },
+      },
+    });
+
+    if (tasksInNewColumn.length > 0) {
+      await Promise.all(
+        tasksInNewColumn.map((t) =>
+          prisma.task.update({
+            where: { id: t.id },
+            data: { position: t.position + 1 },
+          }),
+        ),
+      );
+    }
+
+    // Перемещаем задачу
     await prisma.task.update({
       where: { id: taskId },
-      data: { status: statusEnum, position },
+      data: {
+        columnId: newColumnId,
+        position: newPosition,
+      },
     });
 
     revalidatePath("/");
+    if (newColumn.board.projectId) {
+      revalidatePath(`/projects/${newColumn.board.projectId}/boards/${newColumn.board.id}`);
+    }
   } catch (error) {
-    console.error("Error moving task:", error);
+    console.error("Error moving task to column:", error);
   }
 }
