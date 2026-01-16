@@ -83,13 +83,12 @@ export function KanbanTask({ task, isDragging = false }: KanbanTaskProps) {
             defaultValue={task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : ""}
           />
           <div className="flex gap-1">
-            <Button type="submit" size="sm" className="flex-1 text-xs">
+            <Button type="submit" className="flex-1 text-xs">
               Сохранить
             </Button>
             <Button
               type="button"
               variant="ghost"
-              size="sm"
               onClick={() => setIsEditing(false)}
               className="text-xs"
             >
@@ -121,7 +120,6 @@ export function KanbanTask({ task, isDragging = false }: KanbanTaskProps) {
           <div className={`h-2 w-2 rounded-full ${priorityColors[task.priority]}`} />
           <Button
             variant="ghost"
-            size="sm"
             onClick={() => setIsEditing(true)}
             className="h-5 w-5 p-0 text-xs opacity-0 transition-opacity group-hover:opacity-100"
           >
@@ -129,7 +127,6 @@ export function KanbanTask({ task, isDragging = false }: KanbanTaskProps) {
           </Button>
           <Button
             variant="ghost"
-            size="sm"
             onClick={handleDelete}
             className="h-5 w-5 p-0 text-xs text-red-400 opacity-0 transition-opacity hover:text-red-300 group-hover:opacity-100"
           >

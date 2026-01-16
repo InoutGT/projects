@@ -2,12 +2,13 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
 
-export async function middleware(request: NextRequest) {
-  // Получаем токен из cookies
-  const token = request.cookies.get('auth-token')?.value
+export async function proxy(request: NextRequest) {
+  // В NextAuth v5 куки могут называться по-разному в зависимости от окружения
+  const token = request.cookies.get('next-auth.session-token') || 
+                request.cookies.get('__Secure-next-auth.session-token')
   
-  const isAuthPage = request.nextUrl.pathname.startsWith('/login') || 
-                     request.nextUrl.pathname.startsWith('/register')
+  const isAuthPage = request.nextUrl.pathname.startsWith('/signin') || 
+                     request.nextUrl.pathname.startsWith('/signup')
   
   const isProtectedPage = !request.nextUrl.pathname.startsWith('/api') &&
                           !isAuthPage &&
@@ -16,7 +17,7 @@ export async function middleware(request: NextRequest) {
 
   // Если нет токена и пытается зайти на защищённую страницу
   if (!token && isProtectedPage) {
-    return NextResponse.redirect(new URL('/login', request.url))
+    return NextResponse.redirect(new URL('/signin', request.url))
   }
 
   // Если есть токен и пытается зайти на страницу входа

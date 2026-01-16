@@ -44,7 +44,6 @@ export function BoardCard({ boardId, boardName, projectId, columnsCount }: Board
       <Button
         onClick={handleDelete}
         variant="ghost"
-        size="sm"
         type="button"
         className="absolute right-2 top-2 z-10 h-6 w-6 p-0 text-red-400 opacity-0 transition-opacity hover:text-red-300 group-hover:opacity-100"
         aria-label={`Удалить доску ${boardName}`}

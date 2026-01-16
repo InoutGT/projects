@@ -78,13 +78,12 @@ export function ProjectKanbanTask({ task, isDragging = false }: ProjectKanbanTas
             defaultValue={task.dueDate ? new Date(task.dueDate).toISOString().split("T")[0] : ""}
           />
           <div className="flex gap-1">
-            <Button type="submit" size="sm" className="flex-1 text-xs">
+            <Button type="submit" className="flex-1 text-xs">
               Сохранить
             </Button>
             <Button
               type="button"
               variant="ghost"
-              size="sm"
               onClick={() => setIsEditing(false)}
               className="text-xs"
             >
@@ -127,7 +126,6 @@ export function ProjectKanbanTask({ task, isDragging = false }: ProjectKanbanTas
           </Badge>
           <Button
             variant="ghost"
-            size="sm"
             onClick={() => setIsEditing(true)}
             className="h-6 w-6 p-0 text-sm opacity-0 transition-opacity group-hover:opacity-100"
           >
@@ -135,7 +133,6 @@ export function ProjectKanbanTask({ task, isDragging = false }: ProjectKanbanTas
           </Button>
           <Button
             variant="ghost"
-            size="sm"
             onClick={handleDelete}
             className="h-6 w-6 p-0 text-sm text-red-400 opacity-0 transition-opacity hover:text-red-300 group-hover:opacity-100"
           >

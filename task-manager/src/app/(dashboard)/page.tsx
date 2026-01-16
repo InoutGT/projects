@@ -124,7 +124,7 @@ export default async function DashboardPage() {
                     "use server";
                     await deleteColumnAction(column.id);
                   }}>
-                    <Button type="submit" variant="ghost" size="sm" className="text-red-400 hover:text-red-300">
+                    <Button type="submit" variant="ghost" className="text-red-400 hover:text-red-300">
                       ×
                     </Button>
                   </form>
