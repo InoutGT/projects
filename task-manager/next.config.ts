@@ -7,8 +7,6 @@ const nextConfig: NextConfig = {
       allowedOrigins: ["*.replit.dev", "*.picard.replit.dev", "localhost:5000"]
     }
   },
-  // @ts-ignore - Next.js 15+ property
-  allowedDevOrigins: ["*"],
 };
 
 export default nextConfig;
