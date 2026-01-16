@@ -8,7 +8,20 @@ const nextConfig: NextConfig = {
     }
   },
   // @ts-ignore
-  allowedDevOrigins: ["62d732b1-398c-4264-98e2-0107d1c8d66a-00-ldekcjvvhr7c.picard.replit.dev", "localhost:5000"],
+  allowedDevOrigins: ["*"],
+  async headers() {
+    return [
+      {
+        source: "/(.*)",
+        headers: [
+          {
+            key: "Cache-Control",
+            value: "no-store, max-age=0",
+          },
+        ],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
