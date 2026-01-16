@@ -1,7 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export default function proxy(request: NextRequest) {
-  // Минимальный proxy для Next.js 16
-  // Защита роутов происходит на уровне страниц через auth() и redirect()
+// Completely disabled proxy - no-op middleware
+// All route protection is handled at page level via auth() and redirect()
+export default function proxy(_request: NextRequest) {
   return NextResponse.next();
 }
+
+// Empty matcher ensures proxy never runs - effectively disables it
+export const config = {
+  matcher: [],
+};
