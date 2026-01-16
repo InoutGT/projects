@@ -1,6 +1,9 @@
 import bcrypt from "bcrypt";
 import { NextResponse } from "next/server";
 
+// Force Node.js runtime to avoid Edge Runtime issues with Prisma on Vercel
+export const runtime = "nodejs";
+
 import { prisma } from "@/lib/prisma";
 import { registerSchema } from "@/lib/validators";
 

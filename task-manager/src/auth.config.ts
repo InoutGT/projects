@@ -1,4 +1,3 @@
-import { PrismaAdapter } from "@auth/prisma-adapter";
 import type { NextAuthConfig } from "next-auth";
 import Credentials from "next-auth/providers/credentials";
 import bcrypt from "bcrypt";
@@ -7,7 +6,9 @@ import { prisma } from "@/lib/prisma";
 import { signInSchema } from "@/lib/validators";
 
 const authConfig: NextAuthConfig = {
-  adapter: PrismaAdapter(prisma),
+  // Removed PrismaAdapter - not needed for JWT strategy and causes Edge Runtime issues on Vercel
+  // PrismaAdapter requires Node.js runtime, but NextAuth v5 may try to use Edge Runtime
+  // Since we use JWT strategy, adapter is not required
   session: {
     strategy: "jwt",
   },
