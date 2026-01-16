@@ -47,7 +47,6 @@ export function ProjectKanbanColumn({
               <Button
                 onClick={onDelete}
                 variant="ghost"
-                size="sm"
                 type="button"
                 className="text-red-400 hover:text-red-300 text-lg"
               >

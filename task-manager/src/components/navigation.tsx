@@ -19,7 +19,7 @@ export function Navigation() {
       {navItems.map((item) => (
         <Link key={item.href} href={item.href}>
           <Button
-            variant={pathname === item.href ? "default" : "ghost"}
+            variant={pathname === item.href ? "primary" : "ghost"}
             className={pathname === item.href ? "bg-blue-600 hover:bg-blue-700" : ""}
           >
             {item.label}

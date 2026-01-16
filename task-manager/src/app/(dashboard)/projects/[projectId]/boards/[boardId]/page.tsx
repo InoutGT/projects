@@ -89,7 +89,7 @@ export default async function ProjectBoardPage({
               href={`/projects/${projectId}`}
               className="text-sm text-slate-400 hover:text-slate-300"
             >
-              ← {board.project.name}
+              ← {board.project?.name || "Проект"}
             </Link>
           </div>
           <h1 className="text-3xl font-semibold text-white">{board.name}</h1>
